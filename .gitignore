@@ -132,3 +132,4 @@ ignoreland/
 .idea/
 *.rdb
 *.db
+.DS_Store

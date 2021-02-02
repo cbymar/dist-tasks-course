@@ -14,7 +14,7 @@ with open(CREDS_FILE, 'r') as f:
 # creds
 KEY = creds['SQS']['KEY']
 SECRET = creds['SQS']['SECRET']
-SQS_URL = creds['SQS']['URL']
+SQS_URL = creds['SQS']['DLQURL']
 
 sqs = boto3.client("sqs",
                    region_name="us-west-2",
@@ -23,7 +23,7 @@ sqs = boto3.client("sqs",
                    )
 
 if __name__ == "__main__":
-    print("Starting worker listening on {}".format(SQS_URL))
+    print("Starting DLQ worker listening on {}".format(SQS_URL))
     while True:
         response = sqs.receive_message(
             QueueUrl=SQS_URL,
@@ -35,22 +35,9 @@ if __name__ == "__main__":
 
         messages = response.get("Messages", []) # array type
         for message in messages:
-            try:
                 print("Message Body > ", message.get("Body"))
-                body = json.loads(message.get("Body"))
-                if not body.get("jobId", None):
-                    print("Job Id not provided!")
-                    sqs.delete_message(QueueUrl=SQS_URL, ReceiptHandle=message.get("ReceiptHandle"))
-                    print("Received and deleted message {}".format(message))
-                else:
-                    job_id = body["jobId"]
-                    print("Running Job Id {}".format(job_id))
-                    sqs.delete_message(QueueUrl=SQS_URL, ReceiptHandle=message.get("ReceiptHandle"))
-                    print("Received and deleted message {}".format(message))
-            except Exception as e:
-                print("Exception in worker > ", e)
-                # we are moving this to a dead letter queue.
-                # sqs.delete_message(QueueUrl=SQS_URL, ReceiptHandle=message.get("ReceiptHandle"))
+                sqs.delete_message(QueueUrl=SQS_URL, ReceiptHandle=message.get("ReceiptHandle"))
+
         time.sleep(5)
 
 
